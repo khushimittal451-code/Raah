@@ -1,38 +1,78 @@
 # Raah
 
-Raah is a planned educational simulation that estimates traffic congestion from **synthetic GPS-like aggregate speed, vehicle counts, and queue lengths**, compares permitted semester ML models, and adjusts **VIRTUAL signals** using a constrained rule-based controller.
+A semester ML project for estimating traffic congestion from **synthetic GPS-like aggregate
+speed, vehicle counts and queue lengths**, comparing permitted models, and adjusting
+**VIRTUAL signals** through a constrained rule-based controller.
 
-## Status
+## Phase 1 status
 
-Documentation and local setup only. No data generator, models, simulator, application, or automated test suite is implemented yet. The official syllabus is pending; all proposed topics are **UNVERIFIED**, and complete coverage is not claimed. See [the checklist](docs/SYLLABUS_CHECKLIST.md) and [implementation guidance](AGENTS.md).
+FastAPI health API, React/Vite JavaScript client, dependency manifests and API tests are
+implemented. The client includes a Leaflet abstract network with no external map tiles,
+Recharts empty results view, and axios API status. No model, traffic dataset, or virtual
+controller is implemented yet. There are no measured congestion or model metrics.
+
+Every provisional syllabus topic remains **UNVERIFIED** until the official syllabus is
+provided. No complete coverage is claimed. See [the checklist](docs/SYLLABUS_CHECKLIST.md),
+[implementation guidance](AGENTS.md), and [Phase 1 report](docs/PHASE_1_REPORT.md).
 
 ## Boundaries
 
-- Synthetic data only: no real private GPS, paid traffic APIs, or physical traffic signal control.
-- No reinforcement learning or deep learning.
-- Seed **57**, group-separated train/validation/test splits, and training-only preprocessing.
-- Transparent model metrics and reproducible experiments; virtual control must enforce safe phase transitions and timing constraints.
+- Synthetic data only; no real private GPS, paid traffic APIs or physical signal control.
+- No reinforcement learning, deep learning, MongoDB, Stripe or authentication services.
+- Seed **57**, group-separated splits, training-only preprocessing and transparent metrics.
+- Future virtual control must enforce safe phases, clearance intervals and timing constraints.
 
-## Local setup
+## Setup (PowerShell, repository root)
 
-See [setup status and command history](docs/SETUP_STATUS.md). A local `.venv` exists; npm/npx are workspace-local tools under ignored `work/`. No application dependency manifests exist yet.
+Use Python 3.12 and Node meeting `client/package.json` requirements. The local setup was
+tested with Python 3.12.14 and Node 24.22.1. Generated environments are excluded from Git.
 
 ```powershell
-.\.venv\Scripts\python.exe --version
-.\.venv\Scripts\python.exe -m pip check
-# Available only after the workspace-local npm setup described in SETUP_STATUS:
-.\npm.cmd --version
+python -m venv ml-service/.venv
+.\ml-service\.venv\Scripts\python.exe -m pip install -r requirements.lock.txt
+npm --prefix client ci
 ```
 
-These commands inspect tooling; there is no application run command yet. Generated tools and the venv are not included in Git and require setup in a fresh checkout.
+If npm is not on PATH but the earlier workspace-local tools exist, substitute `.\npm.cmd`
+for `npm`. Those downloaded tools under `work/` are not distributed in Git. For initial
+resolution instead of the tested exact Python versions, use `requirements.txt`.
 
-## Planned implementation
+## Run locally (two terminals)
 
-1. Confirm the official syllabus and permitted model comparisons.
-2. Define synthetic scenarios, aggregate units, congestion targets, and independent split groups.
-3. Build reproducible generation, train-only pipelines, baselines, and evaluation.
-4. Implement and test the constrained virtual controller against a fixed-time baseline.
+```powershell
+.\ml-service\.venv\Scripts\python.exe -m uvicorn app.main:app --app-dir ml-service --host 127.0.0.1 --port 8000
+npm --prefix client run dev
+```
 
-## Results
+Open http://127.0.0.1:5173. The Vite dev proxy rewrites `/api/health` to the API's
+`/health` on port 8000. GET `/health` is liveness only and explicitly marks the controller
+as not implemented. Stop each server with Ctrl+C.
 
-Pending implementation. Report prediction metrics, scenario variation, queue length, throughput, waiting time, and controller constraint violations with limitations once measured.
+Root `.env.example` documents shell variables; it is not automatically loaded. Vite can
+load a copied `client/.env.example` as `client/.env.local`. Never put secrets in VITE_
+variables. A separately hosted production frontend requires its public API base URL at
+build time and corresponding API CORS configuration; the dev proxy is not bundled.
+
+## Checks
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe ml-service/smoke_imports.py
+.\ml-service\.venv\Scripts\python.exe -m pytest
+npm --prefix client run build
+.\ml-service\.venv\Scripts\python.exe tests/check_runtime.py
+```
+
+`docs/PHASE_1_REPORT.md` records actual command output, versions, installation fixes,
+and live health verification. The current tests cover API behavior and local CORS;
+future data leakage and controller invariant tests must accompany those implementations.
+
+## Layout
+
+- `ml-service/`: FastAPI API and import smoke check.
+- `client/`: React/Vite JS frontend, Leaflet, Recharts and axios.
+- `simulation/`: virtual simulation design placeholder.
+- `tests/`: API behavior tests.
+- `docs/`: setup, provisional syllabus and verification reports.
+
+Next: confirm the syllabus, define independent synthetic scenario groups and target
+semantics, then implement seed-57 generation, train-only pipelines and virtual safety tests.

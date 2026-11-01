@@ -1,5 +1,39 @@
+# Local environments and tools
 .venv/
+venv/
 work/
 outputs/
+# Python caches and generated reports
 __pycache__/
 *.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+# JavaScript/build caches
+node_modules/
+dist/
+.vite/
+coverage/
+# Secrets: keep only public configuration examples
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+# Raw/sensitive data and generated model artifacts
+data/raw/
+data/private/
+data/sensitive/
+**/raw_sensitive_data/
+artifacts/
+*.joblib
+*.pkl
+# Local/editor/OS files
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
