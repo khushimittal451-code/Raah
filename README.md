@@ -9,7 +9,7 @@ speed, vehicle counts and queue lengths**, comparing permitted models, and adjus
 FastAPI health API, React/Vite JavaScript client, dependency manifests and API tests are
 implemented. The client includes a Leaflet abstract network with no external map tiles,
 Recharts empty results view, and axios API status. A seeded synthetic dataset and fixed-time virtual junction baseline are now implemented;
-no trained model or adaptive virtual controller is implemented yet. There are no measured congestion or model metrics.
+provisional regression and classification experiments are implemented; no adaptive virtual controller is implemented yet. Validation-only regression metrics are documented below; there are no real-world traffic measurements.
 
 Every provisional syllabus topic remains **UNVERIFIED** until the official syllabus is
 provided. No complete coverage is claimed. See [the checklist](docs/SYLLABUS_CHECKLIST.md),
@@ -116,3 +116,60 @@ validation/test are transform-only. Fitted pipelines and reports live in ignored
 inside each estimator pipeline and fit on training folds only.
 See [preprocessing report](docs/PREPROCESSING_REPORT.md) for API usage, missing/unseen
 category policies and the 275-test verification results.
+
+## Provisional future-wait regression
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe ml-service/training/train_regression.py
+```
+
+Runs only the two explicitly named provisional methods (LinearRegression and numeric
+degree-2 PolynomialFeatures + LinearRegression) and the current-wait persistence reference.
+Official syllabus permission remains UNVERIFIED. Fits on train and reports validation
+MAE/RMSE/R2/timings with diagnostics; it does not open or evaluate test.csv.
+Artifacts and comparison CSV: `artifacts/regression/`. See
+[regression findings](docs/REGRESSION_FINDINGS.md) for negative predictions, prior EDA
+validation exposure, tests and synthetic-data limitations. No other regressors are added.
+
+## Provisional congestion classifiers
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe ml-service/training/train_classification.py
+```
+
+Compares exactly LogisticRegression, KNN, GaussianNB, SVC, DecisionTreeClassifier and
+RandomForestClassifier on the same manifest-backed train/validation groups, using
+train-only preprocessing and the conservative classification feature allowlist. All are
+provisional UNVERIFIED syllabus candidates; no coverage is asserted. Test data is not opened.
+Metrics, per-class counts/recall, confusion matrices, latency and the predeclared
+macro-F1/stability candidate selection are saved in `artifacts/classification/`.
+See [classifier findings](docs/CLASSIFICATION_FINDINGS.md); the selected KNN has weak
+MEDIUM recall and is not control-ready. Derived labels and prior EDA exposure limit claims.
+
+## Training-only unsupervised exploration
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe ml-service/training/unsupervised.py
+.\ml-service\.venv\Scripts\python.exe ml-service/notebooks/execute_unsupervised.py
+```
+
+Provisional K-Means, sampled Ward hierarchy, DBSCAN and PCA fit training groups only.
+Profiles, meaningful silhouettes, variance, PCA views and per-row flag rationale are
+saved in `artifacts/unsupervised/`; the executed notebook is
+`ml-service/notebooks/04_unsupervised.ipynb`. Cluster IDs are not ground-truth labels.
+IQR/z-score flags remain not evaluated until explicit official method verification.
+See [unsupervised findings](docs/UNSUPERVISED_FINDINGS.md) for sample limits, density
+noise interpretation, 22 passing tests and the transparent non-Jupyter fallback check.
+
+## Frozen final assessment
+
+The validation-selected KNN and degree-2 polynomial regressor have been refitted on
+train+validation and assessed once on the six final test runs. Selection was persisted
+before test access. `artifacts/final/` contains selection_manifest.json, full joblib
+pipelines, feature_schema.json, metrics.json, cached predictions, plots and the usage
+ledger. See [final test audit](docs/FINAL_TEST_AUDIT.md) for exact results and prior exposure.
+
+The test is consumed. Preserve the one-use claim and frozen selection. Completed
+evaluator calls replay saved metrics; do not reset the guard or reuse this holdout for
+tuning. The classifier's poor MEDIUM recall and the regressor's negative predictions
+remain limitations; no model is control-ready or officially syllabus-verified.
