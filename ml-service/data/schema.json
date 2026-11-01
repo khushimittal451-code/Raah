@@ -1,0 +1,416 @@
+{
+  "$defs": {
+    "LabeledRun": {
+      "additionalProperties": false,
+      "description": "Storage envelope binding every row to its required synthetic provenance.",
+      "properties": {
+        "provenance": {
+          "$ref": "#/$defs/RunProvenance"
+        },
+        "records": {
+          "items": {
+            "$ref": "#/$defs/LabeledTrafficRecord"
+          },
+          "minItems": 1,
+          "title": "Records",
+          "type": "array"
+        }
+      },
+      "required": [
+        "provenance",
+        "records"
+      ],
+      "title": "LabeledRun",
+      "type": "object"
+    },
+    "LabeledTrafficRecord": {
+      "additionalProperties": false,
+      "description": "Offline training/evaluation row; target fields must never be inference inputs.",
+      "properties": {
+        "run_id": {
+          "description": "Independent synthetic run; split by this group.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "timestamp_seconds": {
+          "description": "Elapsed run seconds from synthetic midnight, on a 10-second grid.",
+          "maximum": 604800,
+          "minimum": 0,
+          "multipleOf": 10,
+          "title": "Timestamp Seconds",
+          "type": "integer"
+        },
+        "intersection_id": {
+          "description": "Synthetic junction identifier, not GPS.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+          "title": "Intersection Id",
+          "type": "string"
+        },
+        "approach_id": {
+          "description": "Inbound approach relative to the abstract junction.",
+          "enum": [
+            "north",
+            "south",
+            "east",
+            "west"
+          ],
+          "title": "Approach Id",
+          "type": "string"
+        },
+        "mean_speed_kmh": {
+          "anyOf": [
+            {
+              "maximum": 160,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Mean GPS-like sampled speed of vehicles present at t; null iff no samples.",
+          "title": "Mean Speed Kmh"
+        },
+        "free_flow_speed_kmh": {
+          "description": "Run/approach configuration speed; not estimated using held-out traffic.",
+          "exclusiveMinimum": 0,
+          "maximum": 160,
+          "title": "Free Flow Speed Kmh",
+          "type": "number"
+        },
+        "vehicle_count": {
+          "description": "Vehicles present on the approach at snapshot t.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Vehicle Count",
+          "type": "integer"
+        },
+        "queue_length_vehicles": {
+          "description": "Queued subset of present vehicles at t.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Queue Length Vehicles",
+          "type": "integer"
+        },
+        "mean_wait_seconds": {
+          "description": "Mean elapsed waiting of currently queued vehicles; zero for no queue.",
+          "maximum": 3600,
+          "minimum": 0,
+          "title": "Mean Wait Seconds",
+          "type": "number"
+        },
+        "incoming_vehicles": {
+          "description": "Approach entries during (t-10,t]; zero at initialization t=0.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Incoming Vehicles",
+          "type": "integer"
+        },
+        "outgoing_vehicles": {
+          "description": "Approach exits during (t-10,t]; zero at initialization t=0.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Outgoing Vehicles",
+          "type": "integer"
+        },
+        "current_phase": {
+          "description": "Intersection-wide virtual phase at t; not a physical signal.",
+          "enum": [
+            "ns_green",
+            "ns_yellow",
+            "all_red_to_ew",
+            "ew_green",
+            "ew_yellow",
+            "all_red_to_ns"
+          ],
+          "title": "Current Phase",
+          "type": "string"
+        },
+        "seconds_in_phase": {
+          "description": "Elapsed seconds in the current virtual phase at t.",
+          "maximum": 3600,
+          "minimum": 0,
+          "title": "Seconds In Phase",
+          "type": "number"
+        },
+        "time_of_day": {
+          "description": "Fractional synthetic hour: (timestamp_seconds / 3600) modulo 24.",
+          "exclusiveMaximum": 24,
+          "minimum": 0,
+          "title": "Time Of Day",
+          "type": "number"
+        },
+        "gps_sample_count": {
+          "description": "Distinct currently present vehicles with a valid synthetic speed sample; one per vehicle.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Gps Sample Count",
+          "type": "integer"
+        },
+        "congestion_level": {
+          "description": "Current rule-derived congestion-v1 index; horizon zero.",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Congestion Level",
+          "type": "string"
+        },
+        "future_wait_seconds": {
+          "description": "Mean queue wait at the exact same run/junction/approach snapshot t+60s.",
+          "maximum": 3600,
+          "minimum": 0,
+          "title": "Future Wait Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "run_id",
+        "timestamp_seconds",
+        "intersection_id",
+        "approach_id",
+        "mean_speed_kmh",
+        "free_flow_speed_kmh",
+        "vehicle_count",
+        "queue_length_vehicles",
+        "mean_wait_seconds",
+        "incoming_vehicles",
+        "outgoing_vehicles",
+        "current_phase",
+        "seconds_in_phase",
+        "time_of_day",
+        "gps_sample_count",
+        "congestion_level",
+        "future_wait_seconds"
+      ],
+      "title": "LabeledTrafficRecord",
+      "type": "object"
+    },
+    "RunProvenance": {
+      "additionalProperties": false,
+      "description": "Required companion metadata for each generated run, not model features.",
+      "properties": {
+        "run_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "scenario_id": {
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+          "title": "Scenario Id",
+          "type": "string"
+        },
+        "source_kind": {
+          "const": "synthetic",
+          "title": "Source Kind",
+          "type": "string"
+        },
+        "generator_version": {
+          "maxLength": 128,
+          "minLength": 1,
+          "title": "Generator Version",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": "1.0.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "seed": {
+          "const": 57,
+          "title": "Seed",
+          "type": "integer"
+        },
+        "observation_interval_seconds": {
+          "const": 10,
+          "title": "Observation Interval Seconds",
+          "type": "integer"
+        },
+        "prediction_horizon_seconds": {
+          "const": 60,
+          "title": "Prediction Horizon Seconds",
+          "type": "integer"
+        },
+        "label_rule_version": {
+          "const": "congestion-v1",
+          "title": "Label Rule Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "scenario_id",
+        "source_kind",
+        "generator_version",
+        "schema_version",
+        "seed",
+        "observation_interval_seconds",
+        "prediction_horizon_seconds",
+        "label_rule_version"
+      ],
+      "title": "RunProvenance",
+      "type": "object"
+    },
+    "TrafficObservation": {
+      "additionalProperties": false,
+      "description": "Required fields available at synthetic snapshot time t; no future data.",
+      "properties": {
+        "run_id": {
+          "description": "Independent synthetic run; split by this group.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+          "title": "Run Id",
+          "type": "string"
+        },
+        "timestamp_seconds": {
+          "description": "Elapsed run seconds from synthetic midnight, on a 10-second grid.",
+          "maximum": 604800,
+          "minimum": 0,
+          "multipleOf": 10,
+          "title": "Timestamp Seconds",
+          "type": "integer"
+        },
+        "intersection_id": {
+          "description": "Synthetic junction identifier, not GPS.",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$",
+          "title": "Intersection Id",
+          "type": "string"
+        },
+        "approach_id": {
+          "description": "Inbound approach relative to the abstract junction.",
+          "enum": [
+            "north",
+            "south",
+            "east",
+            "west"
+          ],
+          "title": "Approach Id",
+          "type": "string"
+        },
+        "mean_speed_kmh": {
+          "anyOf": [
+            {
+              "maximum": 160,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Mean GPS-like sampled speed of vehicles present at t; null iff no samples.",
+          "title": "Mean Speed Kmh"
+        },
+        "free_flow_speed_kmh": {
+          "description": "Run/approach configuration speed; not estimated using held-out traffic.",
+          "exclusiveMinimum": 0,
+          "maximum": 160,
+          "title": "Free Flow Speed Kmh",
+          "type": "number"
+        },
+        "vehicle_count": {
+          "description": "Vehicles present on the approach at snapshot t.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Vehicle Count",
+          "type": "integer"
+        },
+        "queue_length_vehicles": {
+          "description": "Queued subset of present vehicles at t.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Queue Length Vehicles",
+          "type": "integer"
+        },
+        "mean_wait_seconds": {
+          "description": "Mean elapsed waiting of currently queued vehicles; zero for no queue.",
+          "maximum": 3600,
+          "minimum": 0,
+          "title": "Mean Wait Seconds",
+          "type": "number"
+        },
+        "incoming_vehicles": {
+          "description": "Approach entries during (t-10,t]; zero at initialization t=0.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Incoming Vehicles",
+          "type": "integer"
+        },
+        "outgoing_vehicles": {
+          "description": "Approach exits during (t-10,t]; zero at initialization t=0.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Outgoing Vehicles",
+          "type": "integer"
+        },
+        "current_phase": {
+          "description": "Intersection-wide virtual phase at t; not a physical signal.",
+          "enum": [
+            "ns_green",
+            "ns_yellow",
+            "all_red_to_ew",
+            "ew_green",
+            "ew_yellow",
+            "all_red_to_ns"
+          ],
+          "title": "Current Phase",
+          "type": "string"
+        },
+        "seconds_in_phase": {
+          "description": "Elapsed seconds in the current virtual phase at t.",
+          "maximum": 3600,
+          "minimum": 0,
+          "title": "Seconds In Phase",
+          "type": "number"
+        },
+        "time_of_day": {
+          "description": "Fractional synthetic hour: (timestamp_seconds / 3600) modulo 24.",
+          "exclusiveMaximum": 24,
+          "minimum": 0,
+          "title": "Time Of Day",
+          "type": "number"
+        },
+        "gps_sample_count": {
+          "description": "Distinct currently present vehicles with a valid synthetic speed sample; one per vehicle.",
+          "maximum": 10000,
+          "minimum": 0,
+          "title": "Gps Sample Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "run_id",
+        "timestamp_seconds",
+        "intersection_id",
+        "approach_id",
+        "mean_speed_kmh",
+        "free_flow_speed_kmh",
+        "vehicle_count",
+        "queue_length_vehicles",
+        "mean_wait_seconds",
+        "incoming_vehicles",
+        "outgoing_vehicles",
+        "current_phase",
+        "seconds_in_phase",
+        "time_of_day",
+        "gps_sample_count"
+      ],
+      "title": "TrafficObservation",
+      "type": "object"
+    }
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:raah:synthetic-traffic:1.0.0",
+  "$ref": "#/$defs/LabeledRun",
+  "title": "Raah synthetic traffic run, schema 1.0.0",
+  "description": "Primary document: provenance plus labeled records. Use $defs/TrafficObservation for inference snapshots. Cross-field and temporal validation requires app.schemas; see docs/DATA_DICTIONARY.md.",
+  "x-raah-contract": {
+    "seed": 57,
+    "observation_interval_seconds": 10,
+    "prediction_horizon_seconds": 60,
+    "label_rule_version": "congestion-v1",
+    "data_source": "synthetic-only",
+    "runtime_validators_required": true
+  }
+}
