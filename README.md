@@ -8,8 +8,8 @@ speed, vehicle counts and queue lengths**, comparing permitted models, and adjus
 
 FastAPI health API, React/Vite JavaScript client, dependency manifests and API tests are
 implemented. The client includes a Leaflet abstract network with no external map tiles,
-Recharts empty results view, and axios API status. No model, traffic dataset, or virtual
-controller is implemented yet. There are no measured congestion or model metrics.
+Recharts empty results view, and axios API status. A seeded synthetic dataset and fixed-time virtual junction baseline are now implemented;
+no trained model or adaptive virtual controller is implemented yet. There are no measured congestion or model metrics.
 
 Every provisional syllabus topic remains **UNVERIFIED** until the official syllabus is
 provided. No complete coverage is claimed. See [the checklist](docs/SYLLABUS_CHECKLIST.md),
@@ -70,9 +70,20 @@ future data leakage and controller invariant tests must accompany those implemen
 
 - `ml-service/`: FastAPI API and import smoke check.
 - `client/`: React/Vite JS frontend, Leaflet, Recharts and axios.
-- `simulation/`: virtual simulation design placeholder.
+- `simulation/`: seed-57 four-approach generator and fixed-time virtual signal baseline.
 - `tests/`: API behavior tests.
 - `docs/`: setup, provisional syllabus and verification reports.
 
 Next: confirm the syllabus, define independent synthetic scenario groups and target
 semantics, then implement seed-57 generation, train-only pipelines and virtual safety tests.
+
+## Synthetic dataset
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe simulation/generate_data.py
+```
+
+Generates 30 independent synthetic runs, complete 60-second targets, run metadata,
+a tiny sample, source snapshots and phase events under `ml-service/data/`. No live GPS
+is used. See [simulation guide](simulation/README.md) and
+[generation report](docs/SYNTHETIC_DATA_REPORT.md). Split by run before preprocessing.

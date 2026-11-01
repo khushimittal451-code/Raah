@@ -1,4 +1,4 @@
-# Synthetic traffic data dictionary — schema 1.0.0
+# Synthetic traffic data dictionary â€” schema 1.0.0
 
 Raah uses **synthetic data only**, with seed **57**. No real private GPS, geographic
 coordinates, paid traffic feeds, or physical signal integration is permitted. The
@@ -15,7 +15,7 @@ synthetic midnight; no real date, location, timezone, or personal identity is re
 Runs may span up to seven synthetic days (604800 seconds). Flow counts cover `(t-10,t]`;
 at `t=0` both flow counts are zero and vehicle inventory is initialized separately.
 
-- `TrafficObservation`: all 16 current-time fields below, suitable for a future inference
+- `TrafficObservation`: all 15 current-time fields below, suitable for a future inference
   input. No target field is accepted here.
 - `LabeledTrafficRecord`: the same required fields plus both required targets, for offline
   training/evaluation only. No field may be omitted or added; null is permitted only for
@@ -45,21 +45,21 @@ Bounds below are **toy simulation contract limits**, not real-world safety param
 
 | Field | Type / units / accepted range | Meaning and source provenance |
 | --- | --- | --- |
-| `run_id` | string, 1–64 ASCII letters/digits/underscore/hyphen; first character alphanumeric | Independent synthetic rollout ID, from run configuration. Primary split group, never a model input. Related copies/derivatives must retain this group or share a higher-level scenario-family split. |
-| `timestamp_seconds` | integer seconds, 0–604800, multiple of 10 | Snapshot time on the synthetic simulator clock. Metadata for joining and ordering; not a default predictor. |
+| `run_id` | string, 1â€“64 ASCII letters/digits/underscore/hyphen; first character alphanumeric | Independent synthetic rollout ID, from run configuration. Primary split group, never a model input. Related copies/derivatives must retain this group or share a higher-level scenario-family split. |
+| `timestamp_seconds` | integer seconds, 0â€“604800, multiple of 10 | Snapshot time on the synthetic simulator clock. Metadata for joining and ordering; not a default predictor. |
 | `intersection_id` | same identifier format as run_id | Abstract simulated junction ID. No GPS coordinate. Group/location metadata, not a default predictor. |
 | `approach_id` | `north`, `south`, `east`, `west` | Abstract inbound direction, from network configuration. All approaches of an intersection share the intersection phase state at a given t. |
-| `mean_speed_kmh` | finite number, 0–160 km/h, or required null | Arithmetic mean of valid synthetic speed samples for currently present vehicles. At most one latest sample per vehicle within the trailing 10-second window; initialization can sample at t=0. A GPS-like observed proxy, not real GPS. Null iff sample count is zero. May exceed configured free-flow speed; do not silently clip the ratio. |
-| `free_flow_speed_kmh` | finite number, >0–160 km/h | Configured uncongested reference speed, fixed for each run/intersection/approach. Never estimate it from validation/test outcomes. |
-| `vehicle_count` | integer vehicles, 0–10000 | Total approach inventory at t, from simulator truth or an explicitly simulated counter, not the number of GPS samples. |
-| `queue_length_vehicles` | integer vehicles, 0–10000 and <= vehicle_count | Queued subset of inventory from simulator state. Queue membership: vehicle has remained below 1 km/h for at least 5 consecutive simulated seconds; queued waiting accumulates while that membership persists. This operational definition must be versioned with the future generator. |
-| `mean_wait_seconds` | finite number seconds, 0–3600 | Mean elapsed queue-membership duration of vehicles queued at t, from simulator state. Zero if no vehicles are queued; a newly queued vehicle can have zero elapsed wait. Not average lifetime journey delay or mean over vehicles that already departed. |
-| `incoming_vehicles` | integer vehicles/window, 0–10000 | Approach boundary entries during (t-10,t], from simulator transition counters; zero at t=0. May exceed current inventory if vehicles also exited. |
-| `outgoing_vehicles` | integer vehicles/window, 0–10000 | Approach boundary exits during (t-10,t], from simulator transition counters; zero at t=0. Not a future discharge estimate. |
+| `mean_speed_kmh` | finite number, 0â€“160 km/h, or required null | Arithmetic mean of valid synthetic speed samples for currently present vehicles. At most one latest sample per vehicle within the trailing 10-second window; initialization can sample at t=0. A GPS-like observed proxy, not real GPS. Null iff sample count is zero. May exceed configured free-flow speed; do not silently clip the ratio. |
+| `free_flow_speed_kmh` | finite number, >0â€“160 km/h | Configured uncongested reference speed, fixed for each run/intersection/approach. Never estimate it from validation/test outcomes. |
+| `vehicle_count` | integer vehicles, 0â€“10000 | Total approach inventory at t, from simulator truth or an explicitly simulated counter, not the number of GPS samples. |
+| `queue_length_vehicles` | integer vehicles, 0â€“10000 and <= vehicle_count | Queued subset of inventory from simulator state. Queue membership: vehicle has remained below 1 km/h for at least 5 consecutive simulated seconds; queued waiting accumulates while that membership persists. This operational definition must be versioned with the future generator. |
+| `mean_wait_seconds` | finite number seconds, 0â€“3600 | Mean elapsed queue-membership duration of vehicles queued at t, from simulator state. Zero if no vehicles are queued; a newly queued vehicle can have zero elapsed wait. Not average lifetime journey delay or mean over vehicles that already departed. |
+| `incoming_vehicles` | integer vehicles/window, 0â€“10000 | Approach boundary entries during (t-10,t], from simulator transition counters; zero at t=0. May exceed current inventory if vehicles also exited. |
+| `outgoing_vehicles` | integer vehicles/window, 0â€“10000 | Approach boundary exits during (t-10,t], from simulator transition counters; zero at t=0. Not a future discharge estimate. |
 | `current_phase` | enumerated string, see phases below | Intersection-wide virtual signal state at t, from simulator/controller state. Not inferred from speed and not a physical signal command. |
-| `seconds_in_phase` | finite number seconds, 0–3600 and <= timestamp_seconds | Elapsed duration since the virtual intersection entered its current phase; starts at zero. It must match across approaches at the same t. The upper bound is a data-validation cap, not an allowed green duration. |
+| `seconds_in_phase` | finite number seconds, 0â€“3600 and <= timestamp_seconds | Elapsed duration since the virtual intersection entered its current phase; starts at zero. It must match across approaches at the same t. The upper bound is a data-validation cap, not an allowed green duration. |
 | `time_of_day` | finite fractional hour, 0 <= value < 24 | Derived only from `(timestamp_seconds / 3600) % 24`; absolute tolerance 1e-6 hours. It is a synthetic clock covariate, not the computer's local time. |
-| `gps_sample_count` | integer sampled vehicles, 0–10000 and <= vehicle_count | Number of distinct currently present vehicles with one usable synthetic speed sample in the window. A sample-coverage indicator; not packet count and not total traffic count. |
+| `gps_sample_count` | integer sampled vehicles, 0â€“10000 and <= vehicle_count | Number of distinct currently present vehicles with one usable synthetic speed sample in the window. A sample-coverage indicator; not packet count and not total traffic count. |
 
 A zero-vehicle snapshot consequently has zero queue, zero sample count, null speed and
 zero mean wait. A nonempty approach may have no GPS-like samples: keep speed null and
@@ -91,7 +91,7 @@ retain a finer-grained simulator event log when that controller is implemented.
 | Target | Type / units / horizon | Label source |
 | --- | --- | --- |
 | `congestion_level` | `low`, `medium`, `high`; current t (zero prediction horizon) | Deterministic `congestion-v1` operational index from the current synthetic observation, as defined below. It is not an independently measured ground-truth class. |
-| `future_wait_seconds` | finite number seconds, 0–3600; exact **60-second** horizon | The matching future snapshot's `mean_wait_seconds` at t+60 for the same run/intersection/approach. This is the future mean elapsed queue wait, not the integral or average of wait over the next minute. |
+| `future_wait_seconds` | finite number seconds, 0â€“3600; exact **60-second** horizon | The matching future snapshot's `mean_wait_seconds` at t+60 for the same run/intersection/approach. This is the future mean elapsed queue wait, not the integral or average of wait over the next minute. |
 
 For `congestion-v1`, compute `r = mean_speed_kmh / free_flow_speed_kmh` only when speed
 is present. Evaluate **high first**, then medium, otherwise low:
@@ -182,3 +182,13 @@ Schema tests cover required fields, strict types, finite ranges, snapshot consis
 label boundaries, exact grouped future joins, run provenance and generated JSON parity.
 No generator or ML training pipeline is introduced here, and no model metrics are claimed.
 See `docs/DATA_SCHEMA_REPORT.md` for executed checks and actual results.
+
+## Implemented synthetic generator
+
+`simulation/generate_data.py` now implements this contract with 1-second virtual steps
+and 10-second aggregates. `traffic_observations.csv` is the complete labeled window;
+`traffic_source_snapshots.csv` retains the extra 60 seconds needed for audit. Metadata
+and phase-entry logs are saved alongside them. The earlier implementation-status text
+above describes the contract-design stage; see `simulation/README.md` and
+`docs/SYNTHETIC_DATA_REPORT.md` for the generator's present scope and checks. The phase
+plan is a fixed-time virtual baseline, not an adaptive controller or a real signal system.
