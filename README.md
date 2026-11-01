@@ -87,3 +87,32 @@ Generates 30 independent synthetic runs, complete 60-second targets, run metadat
 a tiny sample, source snapshots and phase events under `ml-service/data/`. No live GPS
 is used. See [simulation guide](simulation/README.md) and
 [generation report](docs/SYNTHETIC_DATA_REPORT.md). Split by run before preprocessing.
+
+## Leakage-aware raw splits
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe ml-service/training/prepare_data.py
+```
+
+Persists raw `train.csv`, `validation.csv`, `test.csv` and `split_manifest.json` under
+`ml-service/data/splits/`: 18/6/6 independent runs (60/20/20), seed 57. No preprocessing
+is fitted. Select the task feature allowlist in `training/prepare_data.py`; raw split
+CSVs retain identifiers and targets for storage/audit and must not be used wholesale as X.
+
+This manifest supersedes the older exploratory EDA split. Final test groups were not
+previously explored; two validation runs were seen in historical EDA, so validation is
+a development set rather than a pristine holdout. See [leakage audit](docs/LEAKAGE_AUDIT.md).
+
+## Train-only preprocessing
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe ml-service/training/preprocessing.py
+```
+
+Verifies manifest-backed train-only fitting for both task allowlists and explicit
+standard/no-scaling policies. Numeric medians and phase encoders are fitted on train;
+validation/test are transform-only. Fitted pipelines and reports live in ignored
+`artifacts/preprocessing/`. For cross-validation, build an unfitted preprocessing pipeline
+inside each estimator pipeline and fit on training folds only.
+See [preprocessing report](docs/PREPROCESSING_REPORT.md) for API usage, missing/unseen
+category policies and the 275-test verification results.

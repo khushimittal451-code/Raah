@@ -1,0 +1,219 @@
+{
+  "checks": {
+    "all_rows_preserved": true,
+    "future_labels_exact_same_group": true,
+    "group_disjointness": true,
+    "no_identical_renamed_rollouts": true,
+    "prediction_time_features_only": true,
+    "preprocessing_fitted": false,
+    "source_bytes_unchanged": true,
+    "test_not_previously_explored_in_eda": true,
+    "time_order_preserved": true,
+    "unique_declared_run_seeds": true
+  },
+  "classification_excluded_rule_inputs": [
+    "free_flow_speed_kmh",
+    "mean_speed_kmh",
+    "mean_wait_seconds",
+    "queue_length_vehicles",
+    "vehicle_count"
+  ],
+  "classification_extra_exclusion": {
+    "gps_sample_count": "close proxy for vehicle_count; conservative exclusion"
+  },
+  "excluded_identifiers": [
+    "approach_id",
+    "intersection_id",
+    "run_id",
+    "timestamp_seconds"
+  ],
+  "excluded_targets": [
+    "congestion_level",
+    "future_wait_seconds"
+  ],
+  "features": {
+    "classification": [
+      "incoming_vehicles",
+      "outgoing_vehicles",
+      "current_phase",
+      "seconds_in_phase",
+      "time_of_day"
+    ],
+    "future_wait_regression": [
+      "mean_speed_kmh",
+      "free_flow_speed_kmh",
+      "vehicle_count",
+      "queue_length_vehicles",
+      "mean_wait_seconds",
+      "incoming_vehicles",
+      "outgoing_vehicles",
+      "current_phase",
+      "seconds_in_phase",
+      "time_of_day",
+      "gps_sample_count"
+    ]
+  },
+  "group_column": "run_id",
+  "input_groups": 30,
+  "input_rows": 14520,
+  "limitations": [
+    "Validation includes previously explored EDA groups; it is a development set, not pristine holdout.",
+    "Congestion remains a deterministic feature-derived synthetic index despite removing its direct rule inputs.",
+    "Regression uses simulator-truth queue/count/wait covariates, not GPS-only observations.",
+    "Unique seeds and trajectory fingerprints are evidence, not a statistical proof of independent realism.",
+    "Legacy EDA artifacts/old notebook retain their historical 20/5/5 split; this manifest is authoritative for training."
+  ],
+  "method": "feature-blind seeded run grouping with historical EDA test protection",
+  "prediction_horizon_seconds": 60,
+  "prior_eda_exposure": {
+    "test": [],
+    "train": [
+      "run-57-0001",
+      "run-57-0002",
+      "run-57-0003",
+      "run-57-0004",
+      "run-57-0006",
+      "run-57-0009",
+      "run-57-0010",
+      "run-57-0011",
+      "run-57-0012",
+      "run-57-0013",
+      "run-57-0014",
+      "run-57-0017",
+      "run-57-0018",
+      "run-57-0020",
+      "run-57-0024",
+      "run-57-0025",
+      "run-57-0027",
+      "run-57-0030"
+    ],
+    "validation": [
+      "run-57-0026",
+      "run-57-0028"
+    ]
+  },
+  "prior_eda_policy": "per scenario: seed-57 permutation of sorted run IDs, first4=train, next1=validation, remainder=test",
+  "prior_eda_training_runs": [
+    "run-57-0001",
+    "run-57-0002",
+    "run-57-0003",
+    "run-57-0004",
+    "run-57-0006",
+    "run-57-0009",
+    "run-57-0010",
+    "run-57-0011",
+    "run-57-0012",
+    "run-57-0013",
+    "run-57-0014",
+    "run-57-0017",
+    "run-57-0018",
+    "run-57-0020",
+    "run-57-0024",
+    "run-57-0025",
+    "run-57-0026",
+    "run-57-0027",
+    "run-57-0028",
+    "run-57-0030"
+  ],
+  "requested_ratios": {
+    "test": 0.2,
+    "train": 0.6,
+    "validation": 0.2
+  },
+  "seed": 57,
+  "source_sha256": {
+    "phase_events.csv": "85bd0180a6cc41fbee9017fad124630ae2e47ebeced25806053fdc6644df871f",
+    "run_metadata.csv": "895e7b3a234335586c3ddb26804b9210377f4862a7d00f0988f8fd1bc8ebe546",
+    "traffic_observations.csv": "627a17465cc4b86b579305cddd2c7d2d00e5f7aa4dd06b2cf8f68597c6a4c554",
+    "traffic_sample.csv": "63a54df7686aae0e62db91aa9d1c6ad4b6187b1f97df6c0a4bfd48d0b6ec8403",
+    "traffic_source_snapshots.csv": "f9d24d3e1e258661be07d18014837277861fbb5ee1b8f4346120dc44cbdc21d0"
+  },
+  "splits": {
+    "test": {
+      "file": "test.csv",
+      "group_fraction": 0.2,
+      "groups": 6,
+      "row_fraction": 0.2,
+      "rows": 2904,
+      "run_ids": [
+        "run-57-0005",
+        "run-57-0008",
+        "run-57-0016",
+        "run-57-0021",
+        "run-57-0022",
+        "run-57-0029"
+      ],
+      "scenario_groups": {
+        "asymmetric_rush_hour": 1,
+        "high": 1,
+        "incident": 1,
+        "low": 2,
+        "medium": 1
+      },
+      "sha256": "b50770275896021058bb74d7e0d955c38c81caf7ed1dcb971cb80067152262e6"
+    },
+    "train": {
+      "file": "train.csv",
+      "group_fraction": 0.6,
+      "groups": 18,
+      "row_fraction": 0.6,
+      "rows": 8712,
+      "run_ids": [
+        "run-57-0001",
+        "run-57-0002",
+        "run-57-0003",
+        "run-57-0004",
+        "run-57-0006",
+        "run-57-0009",
+        "run-57-0010",
+        "run-57-0011",
+        "run-57-0012",
+        "run-57-0013",
+        "run-57-0014",
+        "run-57-0017",
+        "run-57-0018",
+        "run-57-0020",
+        "run-57-0024",
+        "run-57-0025",
+        "run-57-0027",
+        "run-57-0030"
+      ],
+      "scenario_groups": {
+        "asymmetric_rush_hour": 4,
+        "high": 3,
+        "incident": 4,
+        "low": 3,
+        "medium": 4
+      },
+      "sha256": "d5695858a88954b3eef4cb5c2cf15ba4f0443cd641b21b7a52e7c03df60c6c5d"
+    },
+    "validation": {
+      "file": "validation.csv",
+      "group_fraction": 0.2,
+      "groups": 6,
+      "row_fraction": 0.2,
+      "rows": 2904,
+      "run_ids": [
+        "run-57-0007",
+        "run-57-0015",
+        "run-57-0019",
+        "run-57-0023",
+        "run-57-0026",
+        "run-57-0028"
+      ],
+      "scenario_groups": {
+        "asymmetric_rush_hour": 1,
+        "high": 2,
+        "incident": 1,
+        "low": 1,
+        "medium": 1
+      },
+      "sha256": "b8408c11d7c5936f7736b9275435d0ff80c27ff18e4cfa12597af80039f8479f"
+    }
+  },
+  "targets": {
+    "classification": "congestion_level",
+    "future_wait_regression": "future_wait_seconds"
+  },
+  "version": "run-split-v1"
+}
