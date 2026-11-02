@@ -18,7 +18,7 @@ export class MapBoundary extends Component {
   state = { failed: false };
   static getDerivedStateFromError() { return { failed: true }; }
   render() {
-    if (this.state.failed) return <div role="alert" className="message error">The map could not render. The recorded approach table and signal lamps below remain available. Reload the page to retry.</div>;
+    if (this.state.failed) return <div role="alert" className="message error">The map could not render. The approach table and signal lamps remain available. Reload the page to retry.</div>;
     return this.props.children;
   }
 }
@@ -68,14 +68,14 @@ export default function JunctionMap({ frame }) {
           {mode === 'osm' && <TileLayer {...TILE_OPTIONS} bounds={EXAMPLE_JUNCTION.bounds} eventHandlers={tileEvents} />}
           {frame.approaches.map(row => {
             const shape = geometryFor(row.approach_id, mode);
-            const lamp = lampFor(frame.current_phase, row.approach_id);
+            const lamp = row.signal_color || lampFor(frame.current_phase, row.approach_id);
             return <Fragment key={row.approach_id}>
               <Polyline positions={shape.road} pathOptions={{ color: '#ffffff', weight: 14, opacity: .9 }} interactive={false} />
               <Polyline positions={shape.road} pathOptions={{ color: CONGESTION_COLORS[row.congestion_level], weight: 8, opacity: .95 }}>
                 <Tooltip>{row.approach_id}: {row.congestion_level} congestion · {row.queue_length_vehicles} queued (synthetic snapshot)</Tooltip>
               </Polyline>
               <CircleMarker center={shape.lamp} radius={9} pathOptions={{ color: '#172c32', weight: 4, fillColor: LAMP_COLORS[lamp], fillOpacity: 1 }}>
-                <Tooltip>{row.approach_id} virtual signal: {lamp} · recorded phase, not congestion</Tooltip>
+                <Tooltip>{row.approach_id} virtual signal: {lamp} · controller phase, not congestion</Tooltip>
               </CircleMarker>
             </Fragment>;
           })}

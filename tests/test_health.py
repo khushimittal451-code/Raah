@@ -21,7 +21,7 @@ def test_health_states_liveness_without_claiming_model_readiness():
         "service": "raah-ml-service",
         "seed": 57,
         "data_mode": "synthetic-only",
-        "controller": "not-implemented",
+        "controller": "virtual-demo",
         "syllabus": "UNVERIFIED",
     }
 

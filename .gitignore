@@ -24,9 +24,9 @@ coverage/
 *.pem
 *.key
 # Raw/sensitive data and generated model artifacts
-data/raw/
-data/private/
-data/sensitive/
+**/data/raw/
+**/data/private/
+**/data/sensitive/
 **/raw_sensitive_data/
 artifacts/
 *.joblib

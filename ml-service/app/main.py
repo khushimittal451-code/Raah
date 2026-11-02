@@ -8,6 +8,8 @@ from fastapi.responses import JSONResponse
 from pydantic import Field
 from app.models import ModelBundle, ROOT, Unavailable
 from app.schemas import StrictRecord, TrafficObservation
+from app.simulation_api import SimulationService, router as simulation_router
+from app.dashboard_api import router as dashboard_router
 
 class BatchRequest(StrictRecord):
     observations: list[TrafficObservation] = Field(min_length=1, max_length=100)
@@ -17,9 +19,12 @@ def create_app(model_dir: Path | None = None):
     async def lifespan(application):
         application.state.bundle = ModelBundle(model_dir or os.getenv('RAAH_MODEL_DIR', str(ROOT / 'artifacts/final')))
         application.state.bundle.load()
+        application.state.simulation = SimulationService(application.state.bundle)
         yield
 
-    application = FastAPI(title='Raah ML Service', version='0.2.0', lifespan=lifespan)
+    application = FastAPI(title='Raah ML Service', version='0.3.0', lifespan=lifespan)
+    application.include_router(simulation_router)
+    application.include_router(dashboard_router)
     origins = [value.strip() for value in os.getenv('RAAH_CORS_ORIGINS', 'http://localhost:5173,http://127.0.0.1:5173').split(',') if value.strip()]
     application.add_middleware(CORSMiddleware, allow_origins=origins, allow_credentials=False,
                                allow_methods=['GET', 'POST'], allow_headers=['Accept', 'Content-Type'])
@@ -43,7 +48,7 @@ def create_app(model_dir: Path | None = None):
     def health():
         """Liveness only; /model-info reports model readiness."""
         return {'status': 'ok', 'service': 'raah-ml-service', 'seed': 57,
-                'data_mode': 'synthetic-only', 'controller': 'not-implemented', 'syllabus': 'UNVERIFIED'}
+                'data_mode': 'synthetic-only', 'controller': 'virtual-demo', 'syllabus': 'UNVERIFIED'}
 
     @application.get('/model-info')
     def model_info(request: Request):

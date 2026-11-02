@@ -1,83 +1,71 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+import { useEffect, useRef, useState } from 'react';
 import JunctionMap from './components/JunctionMap.jsx';
 import SignalPanel, { MapLegend } from './components/SignalPanel.jsx';
-import { validateReplay } from './mapModel.js';
-
-const api = axios.create({ baseURL: import.meta.env.VITE_API_BASE_URL || '/api', timeout: 5000 });
+import { HistoryCharts, ModelMetrics, PredictionPanel } from './components/DashboardPanels.jsx';
+import useSimulation, { useRemote } from './hooks/useSimulation.js';
+import { apiRequest } from './api.js';
 
 export default function App() {
-  const [connection, setConnection] = useState('checking');
-  const [load, setLoad] = useState({ status: 'loading', replay: null });
-  const [attempt, setAttempt] = useState(0);
-  const [index, setIndex] = useState(0);
-  const [playing, setPlaying] = useState(false);
+  const sim = useSimulation();
+  const config = useRemote('/simulation/config');
+  const metrics = useRemote('/model-metrics');
+  const [draft, setDraft] = useState(null);
+  const [touched, setTouched] = useState(false);
+  const [benchmark, setBenchmark] = useState(null);
+  const [benchError, setBenchError] = useState(null);
+  const [benchBusy, setBenchBusy] = useState(false);
+  const benchAbort = useRef(null);
+  const cfg = config.data;
+  const cfgReady = config.status === 'ready' && Array.isArray(cfg?.scenarios) && Array.isArray(cfg?.controllers);
   useEffect(() => {
-    const controller = new AbortController();
-    api.get('/health', { signal: controller.signal })
-      .then(({ data }) => setConnection(data.status === 'ok' ? 'connected' : 'unavailable'))
-      .catch(error => { if (!axios.isCancel(error)) setConnection('unavailable'); });
-    return () => controller.abort();
-  }, []);
-  useEffect(() => {
-    const controller = new AbortController();
-    setLoad({ status: 'loading', replay: null });
-    setPlaying(false);
-    setIndex(0);
-    fetch(`${import.meta.env.BASE_URL}data/junction-replay.json`, { signal: controller.signal })
-      .then(response => {
-        if (!response.ok) throw new Error('Replay request failed');
-        return response.json();
-      })
-      .then(data => setLoad({ status: 'ready', replay: validateReplay(data) }))
-      .catch(error => {
-        if (error.name !== 'AbortError') setLoad({ status: 'error', replay: null });
-      });
-    return () => controller.abort();
-  }, [attempt]);
-  const frames = load.replay?.frames ?? [];
-  useEffect(() => {
-    if (!playing) return undefined;
-    if (index >= frames.length - 1) { setPlaying(false); return undefined; }
-    const timer = setTimeout(() => setIndex(value => value + 1), 1000);
-    return () => clearTimeout(timer);
-  }, [playing, index, frames.length]);
-  const frame = frames[index];
-  const seek = next => { setPlaying(false); setIndex(next); };
+    if (cfgReady && !touched) setDraft({ scenario: sim.state?.scenario || cfg.default_scenario,
+      controller: sim.state?.requested_controller || cfg.default_controller,
+      allowFallback: sim.state?.ml.fallback_policy === 'rule_only' });
+  }, [cfgReady, cfg, sim.state?.generation, touched]);
+  useEffect(() => () => benchAbort.current?.abort(), []);
+  const state = sim.state;
+  const body = draft && cfgReady ? { scenario: draft.scenario, controller: draft.controller,
+    seed: cfg.seed, duration_seconds: cfg.duration_seconds, model_fallback: draft.allowFallback ? 'rule_only' : 'error' } : null;
+  const pending = Boolean(state && draft && (draft.scenario !== state.scenario || draft.controller !== state.requested_controller || body.model_fallback !== state.ml.fallback_policy));
+  const change = values => { sim.pause(); setTouched(true); setDraft(previous => ({ ...previous, ...values })); };
+  async function compare() {
+    sim.pause(); setBenchBusy(true); setBenchError(null);
+    const controller = new AbortController(); benchAbort.current = controller;
+    try {
+      const result = await apiRequest('/simulation/benchmark', { method: 'POST', signal: controller.signal,
+        body: { scenarios: [state.scenario], model_fallback: draft.allowFallback ? 'rule_only' : 'error' } });
+      if (!controller.signal.aborted) setBenchmark(result);
+    } catch (error) { if (!controller.signal.aborted) setBenchError(error.message); }
+    finally { if (!controller.signal.aborted) setBenchBusy(false); }
+  }
   return <main>
     <header><a className="brand" href="./">raah<span> / virtual traffic lab</span></a><span className="simulation-badge">SIMULATED DATA</span></header>
-    <section className="intro"><p className="eyebrow">ONE JUNCTION. TWO DIFFERENT STORIES.</p><h1>Traffic pressure.<br /><em>Signal decisions.</em></h1><p>Explore a recorded synthetic junction. Colored roads describe congestion; separate lamps show what the virtual controller did.</p></section>
+    <section className="intro dashboard-intro"><p className="eyebrow">OBSERVE. COMPARE. KEEP THE CONSTRAINTS.</p><h1>One junction.<br /><em>Every decision visible.</em></h1><p>A backend-driven virtual traffic workspace. Every count, chart point, prediction and countdown comes from the API. No live GPS or physical signal control.</p></section>
     <div className="status-grid">
-      <article><span>Data source</span><strong>Recorded simulation</strong><small>Seed 57 / no live GPS</small></article>
-      <article><span>API liveness</span><strong className={connection === 'connected' ? 'connected' : ''}>{connection}</strong><small>Replay works independently of the API</small></article>
-      <article><span>Syllabus alignment</span><strong>UNVERIFIED</strong><small>Educational virtual system</small></article>
+      <article><span>Backend connection</span><strong className={sim.connection === 'connected' ? 'connected' : ''}>{sim.connection}</strong><small>{sim.running ? 'Running virtual ticks' : 'Paused / state polling only'}</small></article>
+      <article><span>Simulation clock</span><strong>{state ? `t = ${state.tick}s` : 'Not initialized'}</strong><small>Seed {cfg?.seed ?? '—'} · {cfg?.state_scope || 'Loading state contract'}</small></article>
+      <article><span>Syllabus / mode</span><strong>{cfg?.syllabus_status || 'Unavailable'}</strong><small>{state ? `${state.requested_controller} → ${state.effective_controller}` : 'Initialize a backend demo below'}</small></article>
     </div>
-    {load.status === 'loading' && <section className="panel loading-panel" role="status" aria-busy="true"><div className="loading-lines" aria-hidden="true" /><h2>Loading synthetic replay…</h2><p>No traffic or signal values are displayed until the recording is validated.</p></section>}
-    {load.status === 'error' && <section className="panel message error" role="alert"><h2>Simulation data unavailable</h2><p>The recorded data could not be loaded or validated. No replacement traffic values or signal colors have been invented.</p><button type="button" onClick={() => setAttempt(value => value + 1)}>Retry simulation data</button></section>}
-    {frame && <>
-      <section className="replay-controls" aria-label="Recorded simulation playback">
-        <div><p className="eyebrow">READ-ONLY REPLAY / {load.replay.trace_id}</p><strong>t = {frame.timestamp_seconds}s</strong><span className="replay-caption">{frames.length}-second recording excerpt / {playing ? 'playing at 1×' : 'paused'}</span></div>
-        <div className="playback-buttons">
-          <button type="button" onClick={() => setPlaying(value => !value)} disabled={!playing && index === frames.length - 1}>{playing ? 'Pause replay' : 'Play replay'}</button>
-          <button type="button" onClick={() => seek(Math.max(0, index - 1))} disabled={index === 0}>Previous second</button>
-          <button type="button" onClick={() => seek(Math.min(frames.length - 1, index + 1))} disabled={index === frames.length - 1}>Next second</button>
-          <button type="button" onClick={() => seek(0)}>Reset replay</button>
-        </div>
-        <label className="seek-label" htmlFor="replay-seek">Seek recorded seconds<input id="replay-seek" type="range" min="0" max={frames.length - 1} value={index} onChange={event => seek(Number(event.target.value))} /></label>
-      </section>
-      <section className="workspace">
-        <article className="panel map-panel"><div className="panel-heading"><div><p className="eyebrow">ILLUSTRATIVE GEOGRAPHY</p><h2>Four approaches. One view.</h2></div><span className="tag">VIRTUAL ONLY</span></div>
-          <JunctionMap frame={frame} />
-          <MapLegend />
-        </article>
-        <SignalPanel frame={frame} />
-      </section>
-      <section className="panel observation-panel" aria-labelledby="observations-heading"><div className="panel-heading"><div><p className="eyebrow">CONGESTION OBSERVATIONS</p><h2 id="observations-heading">Same snapshot. Clear provenance.</h2></div><span className="tag">OBSERVED AT t = {frame.observed_at_seconds}s</span></div>
-        <p className="muted">Road bands use the congestion-v1 rule on 10-second synthetic snapshots, not model predictions. Lamps update every recorded second. Snapshot age: {frame.timestamp_seconds - frame.observed_at_seconds}s.</p>
-        <div className="table-scroll"><table><caption className="sr-only">Synthetic approach observations</caption><thead><tr><th>Approach</th><th>Congestion</th><th>Queue</th><th>Mean speed</th><th>Current wait</th></tr></thead><tbody>{frame.approaches.map(row => <tr key={row.approach_id}><th scope="row">{row.approach_id}</th><td><span className={`congestion-pill ${row.congestion_level.toLowerCase()}`}>{row.congestion_level}</span></td><td>{row.queue_length_vehicles} vehicles</td><td>{row.mean_speed_kmh === null ? 'No samples' : `${row.mean_speed_kmh.toFixed(1)} km/h`}</td><td>{row.mean_wait_seconds.toFixed(1)} s</td></tr>)}</tbody></table></div>
-        <p className="caption">Signal source: constrained MLAdaptiveController recording. Playback and seeking inspect history; they do not run a controller or send signal commands.</p>
+    {sim.error && <section className="message error" role="alert"><strong>API action failed; simulation paused.</strong><p>{sim.error}</p><p>Any displayed snapshot is the last received state. Timers do not advance locally.</p><button onClick={sim.refresh} disabled={sim.busy}>Refresh backend state</button></section>}
+    <section className="panel controls-panel" aria-label="Simulation controls">
+      {!cfgReady || !draft ? <><p role="status">{config.status === 'error' ? `Control configuration unavailable: ${config.error}` : 'Loading backend control configuration…'}</p><button onClick={config.retry}>Retry configuration</button></> : <>
+        <div className="controls-fields"><label>Scenario<select aria-label="Scenario" value={draft.scenario} onChange={event => change({ scenario: event.target.value })} disabled={sim.busy || benchBusy}>{cfg.scenarios.map(name => <option key={name} value={name}>{name.replaceAll('_', ' ')}</option>)}</select></label>
+          <fieldset><legend>Controller</legend><div className="controller-toggle">{cfg.controllers.map(name => <label key={name}><input type="radio" name="controller" value={name} checked={draft.controller === name} onChange={() => change({ controller: name })} disabled={sim.busy || benchBusy} /><span>{name.replaceAll('_', ' ')}</span></label>)}</div></fieldset></div>
+        <label className="fallback-choice"><input type="checkbox" checked={draft.allowFallback} onChange={event => change({ allowFallback: event.target.checked })} disabled={sim.busy || benchBusy} />I explicitly permit queue-only fallback for unavailable or invalid ML estimates (also applies to comparisons).</label>
+        <div className="playback-buttons dashboard-buttons"><button onClick={() => sim.start(body)} disabled={sim.busy || benchBusy || sim.running || pending || Boolean(sim.error) || state?.completed}>{state ? 'Run' : 'Initialize & run'}</button><button onClick={sim.pause} disabled={!sim.running}>Pause</button><button onClick={() => sim.reset(body)} disabled={sim.busy || benchBusy}>Reset simulation</button><button onClick={sim.refresh} disabled={sim.busy}>Refresh state</button></div>
+        <p className="caption">{pending ? 'Choices changed. Reset to apply them; the displayed state still belongs to the previous configuration.' : 'Run advances one backend tick at a time. Pause allows an in-flight tick to finish, then only reads state.'} One shared demo per API worker.</p>
+      </>}
+    </section>
+    {!state ? <section className="panel no-state" role="status"><h2>{sim.connection === 'connecting' ? 'Loading backend state…' : 'No active backend simulation'}</h2><p>Initialize a scenario to show the map, measurements and model output. No sample traffic will be substituted.</p></section> : <>
+      <section className="workspace"><article className="panel map-panel"><div className="panel-heading"><div><p className="eyebrow">CURRENT BACKEND OBSERVATIONS</p><h2>Congestion on the roads.</h2></div><span className="tag">t = {state.tick}s</span></div><JunctionMap frame={state} /><MapLegend /></article><SignalPanel frame={{ ...state, seconds_in_phase: state.timers.seconds_in_phase, controller_reason: state.last_action.reason, prediction_status: state.ml.status }} live /></section>
+      <HistoryCharts history={sim.history} />
+      <PredictionPanel state={state} />
+      <section className="panel observation-panel"><h2>Per-approach observations</h2><p className="caption">Current backend snapshot · {state.congestion_source}. Speeds without GPS-like samples stay unavailable.</p><div className="table-scroll"><table><caption className="sr-only">Backend approach observations</caption><thead><tr><th>Approach</th><th>Congestion</th><th>Queue</th><th>Mean speed</th><th>Current wait</th></tr></thead><tbody>{state.approaches.map(row => <tr key={row.approach_id}><th scope="row">{row.approach_id}</th><td><span className={`congestion-pill ${row.congestion_level.toLowerCase()}`}>{row.congestion_level}</span></td><td>{row.queue_length_vehicles} vehicles</td><td>{row.mean_speed_kmh === null ? 'No samples' : `${row.mean_speed_kmh.toFixed(2)} km/h`}</td><td>{row.mean_wait_seconds.toFixed(1)} s</td></tr>)}</tbody></table></div></section>
+      <section className="panel comparison-panel"><p className="eyebrow">PAIRED CONTROLLER COMPARISON</p><h2>Compare on the same arrivals.</h2><p className="muted">The backend uses shared traces, warm-up and two independent runs for the active scenario. This pauses the dashboard; results do not claim improvements.</p><button onClick={compare} disabled={benchBusy || sim.busy || !draft}>{benchBusy ? 'Comparing…' : 'Run controller comparison'}</button>{benchError && <p role="alert" className="message error">Comparison failed: {benchError}</p>}
+        {benchmark && <><p className="caption">Backend scenario: {benchmark.config.scenarios.join(', ')} · {benchmark.total_controller_ticks} controller-ticks · fallback used: {String(benchmark.fallback_used)}. Observed waits are right-censored at the horizon.</p><div className="table-scroll"><table><caption className="sr-only">Backend controller comparison</caption><thead><tr><th>Controller / run</th><th>Effective</th><th>Mean wait</th><th>p95 wait</th><th>Throughput</th><th>Violations</th></tr></thead><tbody>{benchmark.run_metrics.map(row => <tr key={`${row.scenario}-${row.controller}-${row.replicate}`}><th>{row.controller} / {row.replicate + 1}</th><td>{row.effective_controller}</td><td>{row.mean_wait_seconds === null ? 'Unavailable' : `${row.mean_wait_seconds.toFixed(2)} s`}</td><td>{row.p95_wait_seconds === null ? 'Unavailable' : `${row.p95_wait_seconds.toFixed(2)} s`}</td><td>{row.throughput_vehicles}</td><td>{row.constraint_violations}</td></tr>)}</tbody></table></div></>}
       </section>
     </>}
-    <footer><span>Seed 57 / synthetic-only / virtual-only</span><span>No physical infrastructure. No live traffic claims.</span></footer>
+    <ModelMetrics remote={metrics} />
+    <footer><span>Backend data only / synthetic-only / virtual-only</span><span>No physical infrastructure. No live traffic claims.</span></footer>
   </main>;
 }

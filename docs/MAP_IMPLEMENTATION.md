@@ -1,3 +1,5 @@
+> Historical map foundation. The current backend-driven dashboard is documented in [DASHBOARD.md](DASHBOARD.md).
+
 # Recorded virtual junction map
 
 The React client renders a Leaflet map with congestion road lines and **separate

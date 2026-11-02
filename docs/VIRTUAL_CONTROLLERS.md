@@ -184,6 +184,9 @@ green/clearance durations, conflicts, pedestrian compatibility, maximum red and 
 
 See CONTROLLER_TEST_REPORT.md for executed checks and honest results. Existing
 generate_data.py, its original 3s yellow/2s all-red baseline, raw data, frozen model
-artifacts and final-test ledger are unchanged. These standalone modules are not
-connected to frontend controls or a signal-command API. `/health` still describes
-the API's lack of a running controller, not the availability of these Python classes.
+artifacts and final-test ledger are unchanged. The classes are also available via
+the bounded, single-user virtual demo API documented in SIMULATION_API.md.
+The frontend consumes backend virtual state and invokes the bounded demo controls;
+it sends no commands to physical traffic infrastructure. See DASHBOARD.md.
+`/health` reports virtual-demo capability only; initialized demo/model readiness
+must be inspected through the corresponding state/model endpoints.

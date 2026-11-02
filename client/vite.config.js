@@ -13,6 +13,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           map: ['leaflet', 'react-leaflet'],
+          charts: ['recharts'],
         },
       },
     },

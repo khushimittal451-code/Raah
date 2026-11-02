@@ -20,7 +20,6 @@ vi.mock('axios', () => ({ default: { create: () => ({ get: vi.fn().mockResolvedV
 
 import JunctionMap from '../components/JunctionMap.jsx';
 import SignalPanel, { MapLegend } from '../components/SignalPanel.jsx';
-import App from '../App.jsx';
 
 beforeEach(() => {
   observed.tile = null; observed.mounts = 0;
@@ -92,48 +91,5 @@ describe('map components', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Use offline schematic' }));
     expect(screen.queryByTestId('tile-layer')).not.toBeInTheDocument();
     expect(screen.getByText(/No map tiles are requested/)).toBeVisible();
-  });
-});
-
-describe('recorded map application', () => {
-  it('shows loading first, then real recorded data and a readable observation table', async () => {
-    render(<App />);
-    expect(screen.getByText('Loading synthetic replay…')).toBeVisible();
-    expect(await screen.findByText('t = 180s')).toBeVisible();
-    expect(screen.getByRole('table', { name: 'Synthetic approach observations' })).toBeVisible();
-    expect(screen.getAllByText('SIMULATED DATA')).toHaveLength(2);
-    expect(screen.getByText(/not model predictions/)).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Previous second' })).toBeDisabled();
-  });
-  it('does not invent a map or values on data failure and can retry explicitly', async () => {
-    fetch.mockResolvedValueOnce({ ok: false });
-    render(<App />);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Simulation data unavailable');
-    expect(screen.queryByTestId('leaflet-map')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry simulation data' }));
-    expect(await screen.findByText('t = 180s')).toBeVisible();
-  });
-  it('shows an explicit data error for malformed recorded phases', async () => {
-    const bad = structuredClone(replay); bad.frames[0].current_phase = 'both_green';
-    fetch.mockResolvedValueOnce({ ok: true, json: async () => bad });
-    render(<App />);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Simulation data unavailable');
-  });
-  it('steps and seeks read-only recorded phases, then stops at the end without looping', async () => {
-    render(<App />);
-    await screen.findByText('t = 180s');
-    fireEvent.click(screen.getByRole('button', { name: 'Next second' }));
-    expect(screen.getByText('t = 181s')).toBeVisible();
-    fireEvent.change(screen.getByRole('slider', { name: 'Seek recorded seconds' }), { target: { value: 118 } });
-    expect(screen.getByText('t = 298s')).toBeVisible();
-    vi.useFakeTimers();
-    fireEvent.click(screen.getByRole('button', { name: 'Play replay' }));
-    act(() => vi.advanceTimersByTime(1000));
-    expect(screen.getByText('t = 299s')).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Play replay' })).toBeDisabled();
-    act(() => vi.advanceTimersByTime(5000));
-    expect(screen.getByText('t = 299s')).toBeVisible();
-    fireEvent.click(screen.getByRole('button', { name: 'Reset replay' }));
-    expect(screen.getByText('t = 180s')).toBeVisible();
   });
 });
