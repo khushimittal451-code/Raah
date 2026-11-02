@@ -4,12 +4,14 @@ A semester ML project for estimating traffic congestion from **synthetic GPS-lik
 speed, vehicle counts and queue lengths**, comparing permitted models, and adjusting
 **VIRTUAL signals** through a constrained rule-based controller.
 
-## Phase 1 status
+## Current status
 
-FastAPI health API, React/Vite JavaScript client, dependency manifests and API tests are
-implemented. The client includes a Leaflet abstract network with no external map tiles,
-Recharts empty results view, and axios API status. A seeded synthetic dataset and fixed-time virtual junction baseline are now implemented;
-provisional regression and classification experiments are implemented; no adaptive virtual controller is implemented yet. Validation-only regression metrics are documented below; there are no real-world traffic measurements.
+FastAPI prediction endpoints and the React/Vite JavaScript client are implemented.
+The client shows an attributed OpenStreetMap example location with an offline
+schematic fallback, recorded synthetic congestion overlays, separate virtual signal
+lamps and API liveness. Provisional ML experiments, paired benchmarks and standalone
+constrained virtual controllers are implemented. The frontend plays recorded states;
+it sends no signal commands. There are no real-world traffic measurements.
 
 Every provisional syllabus topic remains **UNVERIFIED** until the official syllabus is
 provided. No complete coverage is claimed. See [the checklist](docs/SYLLABUS_CHECKLIST.md),
@@ -173,3 +175,52 @@ The test is consumed. Preserve the one-use claim and frozen selection. Completed
 evaluator calls replay saved metrics; do not reset the guard or reuse this holdout for
 tuning. The classifier's poor MEDIUM recall and the regressor's negative predictions
 remain limitations; no model is control-ready or officially syllabus-verified.
+
+## Standalone virtual controllers
+
+FixedTimeController, RuleOnlyAdaptiveController and MLAdaptiveController share one
+six-phase state machine, protected pedestrian assumptions, bounded green changes,
+clearance intervals and maximum-red fairness. Missing/invalid ML predictions fall
+back to queue-only rules. These are illustrative educational simulations; no physical
+actuation or real-road timing certification is supported.
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe -m pytest tests/test_controllers.py tests/test_controller_comparison.py -q
+.\ml-service\.venv\Scripts\python.exe simulation/compare_controllers.py
+```
+
+See [controller contract](docs/VIRTUAL_CONTROLLERS.md) and
+[executed results](docs/CONTROLLER_TEST_REPORT.md). Paired seed-57 demonstration
+metrics and per-second reason logs are saved to ignored `artifacts/controller_demo/`.
+The original dataset generator and frozen ML assessment remain unchanged.
+
+## Paired multi-seed controller benchmark
+
+```powershell
+.\ml-service\.venv\Scripts\python.exe simulation/benchmark.py
+.\ml-service\.venv\Scripts\python.exe simulation/benchmark.py --output-dir work/benchmark-repro --findings work/benchmark-repro-findings.md --verify-against artifacts/benchmark
+```
+
+Five independent seed-57-derived traces per scenario are pre-generated before any
+controller runs. All three policies replay identical arrivals, noise and capacities
+across five scenarios, with 180s warm-up and 600s measurement. Outputs include
+censoring-aware mean/p95/max waits, queues, throughput, fairness, phase changes,
+per-run uncertainty, paired differences, adverse cases, plots and complete action logs.
+See [benchmark findings](docs/BENCHMARK_FINDINGS.md) for limitations and measured
+results. Adaptive improvements are not assumed; the frozen ML evaluation is not rerun.
+
+## Leaflet replay map
+
+The map clearly labels SIMULATED DATA, distinguishes LOW/MEDIUM/HIGH road pressure
+from actual recorded virtual lamp indications, and preserves yellow/all-red phases.
+It includes an attributed illustrative Berlin basemap, conservative tile options,
+offline fallback, read-only playback, observation table, loading/error states and
+responsive layout. No private GPS or paid tile key is used.
+
+```powershell
+node work/tools/npm/package/bin/npm-cli.js --prefix client test
+node work/tools/npm/package/bin/npm-cli.js --prefix client run build
+```
+
+See [map contract](docs/MAP_IMPLEMENTATION.md) and [test report](docs/MAP_TEST_REPORT.md)
+for provenance, OpenStreetMap policy choices, checks and visual-test limitations.
